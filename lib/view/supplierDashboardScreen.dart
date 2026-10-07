@@ -1522,7 +1522,7 @@ class _SupplierDashboardScreenState
 
                       _bookingInput(
                         controller:
-                        priceController,
+                        serviceController,
                         label:
                         'نوع المناسبة',
                         hint:

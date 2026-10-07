@@ -2859,7 +2859,7 @@ class _HospitalityEditorDialogState
                         decoration:
                         _inputDecoration(
                           hint:
-                          'مثال: قهوة عربية',
+                   'مثال : مكسرات ' ,
                           icon: Icons
                               .local_cafe_outlined,
                         ),

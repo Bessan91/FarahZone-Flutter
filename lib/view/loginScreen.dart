@@ -345,9 +345,34 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      if (data['role'] == 'Provider') {
-        final p = await ApiService.getMyProviderProfile();
-        if (!mounted) return;
+      debugPrint('LOGIN RESPONSE: $data');
+
+      // نوع الحساب: ممكن يرجع نص (Provider) أو رقم (1) حسب الباك إند
+      final roleValue =
+          '${data['role'] ?? data['Role'] ?? data['accountType'] ?? ''}'
+              .trim()
+              .toLowerCase();
+      final roleSaysProvider = roleValue == 'provider' || roleValue == '1';
+
+      Map<String, dynamic>? profile;
+
+      if (roleSaysProvider) {
+        // أكيد مزود → لازم نجيب بياناته (وأي خطأ بيظهر للمستخدم)
+        profile = await ApiService.getMyProviderProfile();
+      } else {
+        // احتياط: نسأل الباك إذا عند هالحساب بروفايل مزود
+        // (المستخدم العادي بيرجع له 403 ونعتبره مستخدم عادي)
+        try {
+          profile = await ApiService.getMyProviderProfile();
+        } on ApiException {
+          profile = null;
+        }
+      }
+
+      if (!mounted) return;
+
+      if (profile != null) {
+        final p = profile;
 
         Navigator.pushReplacement(
           context,
@@ -367,6 +392,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
       } else {
+        // مستخدم عادي → الصفحة الرئيسية
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),

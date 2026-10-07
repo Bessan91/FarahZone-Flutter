@@ -54,7 +54,6 @@ class _SignupScreenState extends State<SignupScreen> {
     'الخليل',
   ];
 
-  // تحويل القيم العربية إلى أكواد يفهمها الباك إند
   static const Map<String, String> _serviceCodes = {
     'قاعات الأفراح': 'wedding_hall',
     'صالونات التجميل': 'beauty_salon',
@@ -86,10 +85,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
   bool get isProviderSelected => _accountType == 'provider';
   bool get isUserSelected => _accountType == 'user';
-
-  // =========================================================
-  // BUILD
-  // =========================================================
 
   @override
   Widget build(BuildContext context) {
@@ -272,10 +267,6 @@ class _SignupScreenState extends State<SignupScreen> {
     return _userFields();
   }
 
-  // =========================================================
-  // PROVIDER FIELDS
-  // =========================================================
-
   Widget _providerFields() {
     return Column(
       key: const ValueKey('providerFields'),
@@ -379,10 +370,6 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // =========================================================
-  // USER FIELDS
-  // =========================================================
-
   Widget _userFields() {
     return Column(
       key: const ValueKey('userFields'),
@@ -411,10 +398,6 @@ class _SignupScreenState extends State<SignupScreen> {
       ],
     );
   }
-
-  // =========================================================
-  // LOGIN INFORMATION (email / password)
-  // =========================================================
 
   Widget _loginInformationFields() {
     return Column(
@@ -593,10 +576,6 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // =========================================================
-  // CREATE ACCOUNT  (متصلة بالباك إند عبر ApiService)
-  // =========================================================
-
   Future<void> _createAccount() async {
     if (_isCreatingAccount) return;
 
@@ -622,7 +601,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
     try {
       await ApiService.register({
-        'accountType': _accountType,
+        'role': isProviderSelected ? 'Provider' : 'User',
         'fullName': ownerNameController.text.trim(),
         'email': emailController.text.trim(),
         'password': passwordController.text,
@@ -685,10 +664,6 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
       );
   }
-
-  // =========================================================
-  // SMALL WIDGETS
-  // =========================================================
 
   Widget _sectionTitle(String title) {
     return Row(
@@ -841,10 +816,6 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
     );
   }
-
-  // =========================================================
-  // SELECTORS (service type / location)
-  // =========================================================
 
   Widget _selectorField({
     required IconData icon,
