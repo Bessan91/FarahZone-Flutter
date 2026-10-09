@@ -114,22 +114,17 @@ class _ProviderProfileSetupScreenState
       selectedServiceType == 'قاعات الأفراح' ||
       selectedServiceType == 'قاعات الفنادق';
 
-  @override
+ @override
   void initState() {
     super.initState();
 
     providerNameController = TextEditingController(text: widget.providerName);
-    providerPhoneController =
-        TextEditingController(text: widget.providerPhone);
-    providerEmailController =
-        TextEditingController(text: widget.providerEmail);
-    serviceNameController =
-        TextEditingController(text: widget.initialServiceName);
+    providerPhoneController = TextEditingController(text: widget.providerPhone);
+    providerEmailController = TextEditingController(text: widget.providerEmail);
+    serviceNameController = TextEditingController(text: widget.initialServiceName);
     addressController = TextEditingController(text: widget.initialAddress);
-    descriptionController =
-        TextEditingController(text: widget.initialDescription);
-    licensedOperatorController =
-        TextEditingController(text: widget.licensedOperatorNumber);
+    descriptionController = TextEditingController(text: widget.initialDescription);
+    licensedOperatorController = TextEditingController(text: widget.licensedOperatorNumber);
 
     selectedServiceType = serviceTypes.contains(widget.serviceType)
         ? widget.serviceType
@@ -139,9 +134,51 @@ class _ProviderProfileSetupScreenState
         ? widget.initialLocation
         : null;
 
-    halls = _deepCopyHalls(widget.initialHalls);
+    // تهيئة البيانات القادمة وتنسيقها
+    halls = _normalizeHallsList(widget.initialHalls);
   }
 
+  // دالة توحيد مسميات الحقول لضمان عمل القراء الحالية والمستقبلية
+  List<Map<String, dynamic>> _normalizeHallsList(List<dynamic> rawList) {
+    return rawList.map((item) {
+      final hall = Map<String, dynamic>.from(item as Map);
+
+      // توحيد مصفوفة الأسعار
+      final rawPrices = hall['prices'] ?? hall['Prices'] ?? hall['hallPrices'] ?? hall['HallPrices'] ?? [];
+      final normalizedPrices = (rawPrices as List).map((p) {
+        final priceMap = Map<String, dynamic>.from(p as Map);
+        return {
+          'capacityRange': priceMap['capacityRange'] ?? priceMap['CapacityRange'] ?? priceMap['dayOrSeason'] ?? priceMap['DayOrSeason'] ?? '',
+          'price': priceMap['price'] ?? priceMap['Price'] ?? 0,
+        };
+      }).toList();
+
+      // توحيد المناسبات
+      final rawOccasions = hall['occasions'] ?? hall['Occasions'] ?? hall['hallOccasions'] ?? [];
+      final normalizedOccasions = (rawOccasions as List).map((o) {
+        if (o is Map) {
+          final oMap = Map<String, dynamic>.from(o);
+          return {
+            'name': oMap['name'] ?? oMap['Name'] ?? oMap['occasionName'] ?? oMap['OccasionName'] ?? '',
+            'price': oMap['price'] ?? oMap['Price'] ?? '',
+          };
+        }
+        return {'name': o.toString(), 'price': ''};
+      }).toList();
+
+      return {
+        'id': hall['id'] ?? hall['Id'],
+        'name': hall['name'] ?? hall['Name'] ?? '',
+        'pricing': normalizedPrices,
+        'prices': normalizedPrices,
+        'occasions': normalizedOccasions,
+        'includedItems': List<String>.from(hall['includedItems'] ?? hall['IncludedItems'] ?? []),
+        'services': List<String>.from(hall['services'] ?? hall['Services'] ?? []),
+        'hospitality': hall['hospitalities'] ?? hall['Hospitalities'] ?? hall['hospitality'] ?? [],
+      };
+    }).toList();
+  }
+  
   @override
   void dispose() {
     providerNameController.dispose();

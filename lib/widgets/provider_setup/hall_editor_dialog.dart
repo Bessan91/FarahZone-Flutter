@@ -64,6 +64,7 @@ class _HallEditorDialogState extends State<HallEditorDialog> {
           '',
     );
 
+    // قراءة الأسعار مع دعم مفتاح DayOrSeason المخزن في قاعدة البيانات
     final List pricingList = (hall?['prices'] as List? ??
             hall?['Prices'] as List? ??
             hall?['hallPrices'] as List? ??
@@ -102,16 +103,19 @@ class _HallEditorDialogState extends State<HallEditorDialog> {
       }
     }
 
+    // قراءة العناصر المشمولة بالسعر
     final rawIncluded = hall?['includedItems'] as List? ??
         hall?['IncludedItems'] as List? ??
         [];
     selectedIncludedItems.addAll(rawIncluded.map((e) => e.toString()).toList());
 
+    // قراءة الخدمات الإضافية
     final rawServices = hall?['services'] as List? ??
         hall?['Services'] as List? ??
         [];
     selectedServices.addAll(rawServices.map((e) => e.toString()).toList());
 
+    // قراءة المناسبات والأسعار الخاصة
     final savedOccasions = hall?['occasions'] as List? ??
         hall?['Occasions'] as List? ??
         hall?['hallOccasions'] as List? ??
@@ -141,8 +145,10 @@ class _HallEditorDialogState extends State<HallEditorDialog> {
       }
     }
 
+    // قراءة الضيافة
     final rawHospitality = hall?['hospitalities'] as List? ??
         hall?['Hospitalities'] as List? ??
+        hall?['hospitality'] as List? ??
         [];
 
     hospitalityItems.addAll(
