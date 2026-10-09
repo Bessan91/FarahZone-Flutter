@@ -98,10 +98,8 @@ class ApiService {
   // PROVIDER PROFILE  (للمزود فقط - يحتاج تسجيل دخول)
   // =========================================================
 
-  /// يرجع البيانات بنفس الشكل اللي بتستخدمه الشاشات (عربي + نصوص للأسعار)
-  static Future<Map<String, dynamic>> getMyProviderProfile() async {
-    final d = _asMap(await _request('GET', '/provider/profile', auth: true));
-
+  /// يحوّل رد الباك إلى نفس الشكل اللي بتستخدمه الشاشات (عربي + نصوص للأسعار)
+  static Map<String, dynamic> _profileFromApi(Map<String, dynamic> d) {
     return {
       'providerName': d['fullName'] ?? '',
       'providerPhone': d['phone'] ?? '',
@@ -116,9 +114,16 @@ class ApiService {
     };
   }
 
-  static Future<void> saveProviderProfile({
+  static Future<Map<String, dynamic>> getMyProviderProfile() async {
+    final d = _asMap(await _request('GET', '/provider/profile', auth: true));
+    return _profileFromApi(d);
+  }
+
+  /// يحفظ بروفايل المزود ويرجع البيانات المحفوظة (بنفس شكل الشاشات)
+  static Future<Map<String, dynamic>> saveProviderProfile({
     required String providerName,
     required String providerPhone,
+    String providerEmail = '',
     required String businessName,
     required String serviceType, // عربي
     required String location, // عربي
@@ -127,7 +132,7 @@ class ApiService {
     required String licenseNumber,
     required List<Map<String, dynamic>> halls,
   }) async {
-    await _request(
+    final response = await _request(
       'PUT',
       '/provider/profile',
       auth: true,
@@ -143,6 +148,26 @@ class ApiService {
         'halls': hallsToApi(halls),
       },
     );
+
+    final d = _asMap(response);
+
+    // لو الباك ما رجّع بيانات، نرجّع اللي انبعت (حتى تتحدث الشاشة)
+    if (d.isEmpty) {
+      return {
+        'providerName': providerName,
+        'providerPhone': providerPhone,
+        'providerEmail': providerEmail,
+        'businessName': businessName,
+        'serviceType': serviceType,
+        'location': location,
+        'address': address,
+        'description': description,
+        'licensedOperatorNumber': licenseNumber,
+        'halls': halls,
+      };
+    }
+
+    return _profileFromApi(d);
   }
 
   // =========================================================
@@ -357,4 +382,18 @@ class ApiService {
 
     throw ApiException(message, res.statusCode);
   }
+  static Future<void> deleteHall(int hallId) async {
+  final token = await getToken();
+  final response = await http.delete(
+    Uri.parse('$baseUrl/Hall/$hallId'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+  );
+
+  if (response.statusCode != 200) {
+    throw ApiException('فشل حذف القاعة من السيرفر');
+  }
+}
 }
