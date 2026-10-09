@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:farah/services/api_service.dart';
-import 'package:farah/widgets/provider_setup/hall_editor_dialog.dart';
+import 'package:farah/utils/hall_shape.dart';
+import '../widgets/provider_setup/hall_editor_dialog.dart';
 
 class ProviderProfileSetupScreen extends StatefulWidget {
   final String providerName;
@@ -114,17 +115,22 @@ class _ProviderProfileSetupScreenState
       selectedServiceType == 'قاعات الأفراح' ||
       selectedServiceType == 'قاعات الفنادق';
 
- @override
+  @override
   void initState() {
     super.initState();
 
     providerNameController = TextEditingController(text: widget.providerName);
-    providerPhoneController = TextEditingController(text: widget.providerPhone);
-    providerEmailController = TextEditingController(text: widget.providerEmail);
-    serviceNameController = TextEditingController(text: widget.initialServiceName);
+    providerPhoneController =
+        TextEditingController(text: widget.providerPhone);
+    providerEmailController =
+        TextEditingController(text: widget.providerEmail);
+    serviceNameController =
+        TextEditingController(text: widget.initialServiceName);
     addressController = TextEditingController(text: widget.initialAddress);
-    descriptionController = TextEditingController(text: widget.initialDescription);
-    licensedOperatorController = TextEditingController(text: widget.licensedOperatorNumber);
+    descriptionController =
+        TextEditingController(text: widget.initialDescription);
+    licensedOperatorController =
+        TextEditingController(text: widget.licensedOperatorNumber);
 
     selectedServiceType = serviceTypes.contains(widget.serviceType)
         ? widget.serviceType
@@ -134,51 +140,9 @@ class _ProviderProfileSetupScreenState
         ? widget.initialLocation
         : null;
 
-    // تهيئة البيانات القادمة وتنسيقها
     halls = _normalizeHallsList(widget.initialHalls);
   }
 
-  // دالة توحيد مسميات الحقول لضمان عمل القراء الحالية والمستقبلية
-  List<Map<String, dynamic>> _normalizeHallsList(List<dynamic> rawList) {
-    return rawList.map((item) {
-      final hall = Map<String, dynamic>.from(item as Map);
-
-      // توحيد مصفوفة الأسعار
-      final rawPrices = hall['prices'] ?? hall['Prices'] ?? hall['hallPrices'] ?? hall['HallPrices'] ?? [];
-      final normalizedPrices = (rawPrices as List).map((p) {
-        final priceMap = Map<String, dynamic>.from(p as Map);
-        return {
-          'capacityRange': priceMap['capacityRange'] ?? priceMap['CapacityRange'] ?? priceMap['dayOrSeason'] ?? priceMap['DayOrSeason'] ?? '',
-          'price': priceMap['price'] ?? priceMap['Price'] ?? 0,
-        };
-      }).toList();
-
-      // توحيد المناسبات
-      final rawOccasions = hall['occasions'] ?? hall['Occasions'] ?? hall['hallOccasions'] ?? [];
-      final normalizedOccasions = (rawOccasions as List).map((o) {
-        if (o is Map) {
-          final oMap = Map<String, dynamic>.from(o);
-          return {
-            'name': oMap['name'] ?? oMap['Name'] ?? oMap['occasionName'] ?? oMap['OccasionName'] ?? '',
-            'price': oMap['price'] ?? oMap['Price'] ?? '',
-          };
-        }
-        return {'name': o.toString(), 'price': ''};
-      }).toList();
-
-      return {
-        'id': hall['id'] ?? hall['Id'],
-        'name': hall['name'] ?? hall['Name'] ?? '',
-        'pricing': normalizedPrices,
-        'prices': normalizedPrices,
-        'occasions': normalizedOccasions,
-        'includedItems': List<String>.from(hall['includedItems'] ?? hall['IncludedItems'] ?? []),
-        'services': List<String>.from(hall['services'] ?? hall['Services'] ?? []),
-        'hospitality': hall['hospitalities'] ?? hall['Hospitalities'] ?? hall['hospitality'] ?? [],
-      };
-    }).toList();
-  }
-  
   @override
   void dispose() {
     providerNameController.dispose();
@@ -192,42 +156,8 @@ class _ProviderProfileSetupScreenState
     super.dispose();
   }
 
-  List<Map<String, dynamic>> _deepCopyHalls(
-    List<Map<String, dynamic>> source,
-  ) {
-    return source.map((hall) {
-      return {
-        ...hall,
-        'pricing': (hall['pricing'] as List? ?? []).map((item) {
-          if (item is Map) {
-            return Map<String, dynamic>.from(item);
-          }
-          return <String, dynamic>{};
-        }).toList(),
-        'includedItems': List<String>.from(
-          hall['includedItems'] as List? ?? [],
-        ),
-        'hospitality': (hall['hospitality'] as List? ?? []).map((item) {
-          if (item is Map) {
-            return Map<String, dynamic>.from(item);
-          }
-          return <String, dynamic>{};
-        }).toList(),
-        'services': List<String>.from(
-          hall['services'] as List? ?? [],
-        ),
-        'occasions': (hall['occasions'] as List? ?? []).map((item) {
-          if (item is Map) {
-            return Map<String, dynamic>.from(item);
-          }
-
-          return {
-            'name': item.toString(),
-            'price': '',
-          };
-        }).toList(),
-      };
-    }).toList();
+  List<Map<String, dynamic>> _normalizeHallsList(List<dynamic> rawList) {
+    return HallShape.normalizeList(rawList);
   }
 
   @override
@@ -537,7 +467,7 @@ class _ProviderProfileSetupScreenState
               ),
             ),
             ElevatedButton.icon(
-              onPressed: _showHallEditor,
+              onPressed: () => _showHallEditor(),
               icon: const Icon(Icons.add, size: 18),
               label: const Text(
                 'إضافة',
@@ -614,20 +544,25 @@ class _ProviderProfileSetupScreenState
     Map<String, dynamic> hall,
     int index,
   ) {
-    final pricing = (hall['pricing'] as List? ?? [])
+    final pricing = (hall['pricing'] as List? ??
+            hall['prices'] as List? ??
+            hall['Prices'] as List? ??
+            [])
         .whereType<Map>()
         .map((item) => Map<String, dynamic>.from(item))
         .toList();
 
     final includedItems = List<String>.from(
-      hall['includedItems'] as List? ?? [],
+      hall['includedItems'] as List? ?? hall['IncludedItems'] as List? ?? [],
     );
 
     final services = List<String>.from(
-      hall['services'] as List? ?? [],
+      hall['services'] as List? ?? hall['Services'] as List? ?? [],
     );
 
-    final occasions = (hall['occasions'] as List? ?? []);
+    final occasions = (hall['occasions'] as List? ??
+        hall['Occasions'] as List? ??
+        []);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -664,7 +599,7 @@ class _ProviderProfileSetupScreenState
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  hall['name']?.toString() ?? 'قاعة',
+                  hall['name']?.toString() ?? hall['Name']?.toString() ?? 'قاعة',
                   style: const TextStyle(
                     color: navy,
                     fontWeight: FontWeight.bold,
@@ -717,7 +652,9 @@ class _ProviderProfileSetupScreenState
                       children: [
                         Expanded(
                           child: Text(
-                            item['peopleRange']?.toString() ?? '',
+                            item['peopleRange']?.toString() ??
+                                item['capacityRange']?.toString() ??
+                                '',
                             style: const TextStyle(
                               color: textGrey,
                               fontSize: 11,
@@ -726,7 +663,7 @@ class _ProviderProfileSetupScreenState
                           ),
                         ),
                         Text(
-                          _formatPrice(item['price']),
+                          _formatPrice(item['price'] ?? item['Price']),
                           style: const TextStyle(
                             color: navy,
                             fontSize: 11,
@@ -747,131 +684,6 @@ class _ProviderProfileSetupScreenState
                   fontFamily: 'LibertinusMath',
                 ),
               ),
-          ],
-          if (includedItems.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 5,
-              runSpacing: 5,
-              children: includedItems.map((item) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: green.withOpacity(0.09),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    item,
-                    style: const TextStyle(
-                      color: green,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'LibertinusMath',
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-          if (services.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 5,
-              runSpacing: 5,
-              children: services.map((service) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: navy.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.check_circle,
-                        color: green,
-                        size: 13,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        service,
-                        style: const TextStyle(
-                          color: navy,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'LibertinusMath',
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-          if (occasions.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            const Text(
-              'المناسبات والأسعار الخاصة',
-              style: TextStyle(
-                color: navy,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                fontFamily: 'LibertinusMath',
-              ),
-            ),
-            const SizedBox(height: 7),
-            ...occasions.map((item) {
-              String name = '';
-              String price = '';
-
-              if (item is Map) {
-                name = item['name']?.toString() ?? '';
-                price = item['price']?.toString() ?? '';
-              } else {
-                name = item.toString();
-              }
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.check_circle,
-                      color: green,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: const TextStyle(
-                          color: textGrey,
-                          fontSize: 10,
-                          fontFamily: 'LibertinusMath',
-                        ),
-                      ),
-                    ),
-                    if (price.isNotEmpty)
-                      Text(
-                        _formatPrice(price),
-                        style: const TextStyle(
-                          color: navy,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'LibertinusMath',
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            }),
           ],
         ],
       ),
@@ -898,11 +710,13 @@ class _ProviderProfileSetupScreenState
 
     if (result == null) return;
 
+    final hall = HallShape.normalize(result);
+
     setState(() {
       if (existingIndex != null) {
-        halls[existingIndex] = result;
+        halls[existingIndex] = hall;
       } else {
-        halls.add(result);
+        halls.add(hall);
       }
     });
   }
@@ -1159,7 +973,7 @@ class _ProviderProfileSetupScreenState
     final location = selectedLocation ?? '';
     final serviceType = selectedServiceType;
 
-    final hallsCopy = _deepCopyHalls(halls);
+    final hallsCopy = HallShape.normalizeList(halls);
 
     try {
       await ApiService.saveProviderProfile(

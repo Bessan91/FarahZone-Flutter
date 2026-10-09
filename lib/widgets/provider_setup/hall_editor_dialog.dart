@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'hospitality_editor_dialog.dart';
+import 'package:farah/utils/hall_shape.dart';
 
 class HallEditorDialog extends StatefulWidget {
   final List<String> capacityRanges;
@@ -55,22 +56,15 @@ class _HallEditorDialogState extends State<HallEditorDialog> {
   void initState() {
     super.initState();
 
-    final hall = widget.existingHall;
+    final hall = widget.existingHall != null
+        ? HallShape.normalize(widget.existingHall!)
+        : null;
 
     nameController = TextEditingController(
-      text: hall?['name']?.toString() ??
-          hall?['Name']?.toString() ??
-          hall?['title']?.toString() ??
-          '',
+      text: hall?['name']?.toString() ?? '',
     );
 
-    // قراءة الأسعار مع دعم مفتاح DayOrSeason المخزن في قاعدة البيانات
-    final List pricingList = (hall?['prices'] as List? ??
-            hall?['Prices'] as List? ??
-            hall?['hallPrices'] as List? ??
-            hall?['HallPrices'] as List? ??
-            hall?['pricing'] as List? ??
-            [])
+    final List pricingList = (hall?['pricing'] as List? ?? [])
         .whereType<Map>()
         .map((item) => Map<String, dynamic>.from(item))
         .toList();
@@ -79,18 +73,8 @@ class _HallEditorDialogState extends State<HallEditorDialog> {
       pricingControllers[range] = TextEditingController();
 
       for (final item in pricingList) {
-        final rawRange = item['dayOrSeason']?.toString() ??
-            item['DayOrSeason']?.toString() ??
-            item['capacityRange']?.toString() ??
-            item['CapacityRange']?.toString() ??
-            item['peopleRange']?.toString() ??
-            item['PeopleRange']?.toString() ??
-            '';
-
-        final rawPrice = item['price']?.toString() ??
-            item['Price']?.toString() ??
-            item['amount']?.toString() ??
-            '';
+        final rawRange = item['peopleRange']?.toString() ?? '';
+        final rawPrice = item['price']?.toString() ?? '';
 
         if (_normalize(rawRange) == _normalize(range) ||
             (_normalize(rawRange).isNotEmpty &&
@@ -103,54 +87,32 @@ class _HallEditorDialogState extends State<HallEditorDialog> {
       }
     }
 
-    // قراءة العناصر المشمولة بالسعر
-    final rawIncluded = hall?['includedItems'] as List? ??
-        hall?['IncludedItems'] as List? ??
-        [];
+    final rawIncluded = hall?['includedItems'] as List? ?? [];
     selectedIncludedItems.addAll(rawIncluded.map((e) => e.toString()).toList());
 
-    // قراءة الخدمات الإضافية
-    final rawServices = hall?['services'] as List? ??
-        hall?['Services'] as List? ??
-        [];
+    final rawServices = hall?['services'] as List? ?? [];
     selectedServices.addAll(rawServices.map((e) => e.toString()).toList());
 
-    // قراءة المناسبات والأسعار الخاصة
-    final savedOccasions = hall?['occasions'] as List? ??
-        hall?['Occasions'] as List? ??
-        hall?['hallOccasions'] as List? ??
-        [];
+    final savedOccasions = hall?['occasions'] as List? ?? [];
 
     for (final occasion in widget.occasionOptions) {
       occasionPriceControllers[occasion] = TextEditingController();
 
       for (final item in savedOccasions) {
         if (item is Map) {
-          final name = item['occasionName']?.toString() ??
-              item['OccasionName']?.toString() ??
-              item['name']?.toString() ??
-              item['Name']?.toString() ??
-              '';
+          final name = item['name']?.toString() ?? '';
 
           if (_normalize(name) == _normalize(occasion)) {
             selectedOccasions.add(occasion);
             occasionPriceControllers[occasion]!.text =
-                item['price']?.toString() ?? item['Price']?.toString() ?? '';
+                item['price']?.toString() ?? '';
             break;
           }
-        } else if (_normalize(item.toString()) == _normalize(occasion)) {
-          selectedOccasions.add(occasion);
-          break;
         }
       }
     }
 
-    // قراءة الضيافة
-    final rawHospitality = hall?['hospitalities'] as List? ??
-        hall?['Hospitalities'] as List? ??
-        hall?['hospitality'] as List? ??
-        [];
-
+    final rawHospitality = hall?['hospitality'] as List? ?? [];
     hospitalityItems.addAll(
       rawHospitality
           .whereType<Map>()
@@ -664,7 +626,7 @@ class _HallEditorDialogState extends State<HallEditorDialog> {
                     children: [
                       Expanded(
                         child: Text(
-                          item['name']?.toString() ?? item['Name']?.toString() ?? '',
+                          item['name']?.toString() ?? '',
                           style: const TextStyle(
                             color: navy,
                             fontSize: 11,
@@ -917,11 +879,7 @@ class _HallEditorDialogState extends State<HallEditorDialog> {
         return;
       }
 
-      pricing.add({
-        'capacityRange': range,
-        'dayOrSeason': range,
-        'price': double.tryParse(value) ?? value,
-      });
+      pricing.add({'peopleRange': range, 'price': value});
     }
 
     if (pricing.isEmpty) {
@@ -949,29 +907,18 @@ class _HallEditorDialogState extends State<HallEditorDialog> {
         return;
       }
 
-      occasions.add({
-        'name': occasion,
-        'occasionName': occasion,
-        'price': double.tryParse(price) ?? price,
-      });
+      occasions.add({'name': occasion, 'price': price});
     }
 
-    final hallData = {
-      if (widget.existingHall != null && widget.existingHall!['id'] != null)
-        'id': widget.existingHall!['id'],
-      if (widget.existingHall != null && widget.existingHall!['Id'] != null)
-        'Id': widget.existingHall!['Id'],
+    final hallData = HallShape.normalize({
+      'id': widget.existingHall?['id'] ?? widget.existingHall?['Id'],
       'name': name,
-      'Name': name,
-      'prices': pricing,
-      'Prices': pricing,
-      'hallPrices': pricing,
+      'pricing': pricing,
       'includedItems': List<String>.from(selectedIncludedItems),
-      'hospitalities': hospitalityItems,
       'services': List<String>.from(selectedServices),
       'occasions': occasions,
-      'Occasions': occasions,
-    };
+      'hospitality': hospitalityItems,
+    });
 
     Navigator.pop(context, hallData);
   }
